@@ -10,6 +10,7 @@ public class CameraFeedActivity extends Activity {
 	
 	private Camera mCamera;
 	private CameraFeedView mCameraFeedView;
+	private CameraOverlayView mCameraOverlayView;
 	private FrameLayout mFrame;
 	
 	@Override
@@ -31,6 +32,9 @@ public class CameraFeedActivity extends Activity {
 			}
 			mCameraFeedView = new CameraFeedView(this, mCamera);
 			mFrame.addView(mCameraFeedView);
+			
+			mCameraOverlayView = new CameraOverlayView(this);
+			mFrame.addView(mCameraOverlayView);
 		} catch (Exception e) {
 			// camera not available (in use)
 			Toast.makeText(this, "Camera not available", Toast.LENGTH_LONG).show();
