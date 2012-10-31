@@ -14,16 +14,23 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        Button startCameraButton = (Button)findViewById(R.id.view_feed_button);
-        startCameraButton.setOnClickListener(new View.OnClickListener(	) {
+        Button startCameraCompassButton = (Button)findViewById(R.id.view_feed_compass_button);
+        Button startCameraTagsButton = (Button)findViewById(R.id.view_feed_tags_button);
+        startCameraCompassButton.setOnClickListener(new View.OnClickListener(	) {
 			public void onClick(View v) {
-				startCameraActivity();
+				startCameraActivity(CameraOverlayView.OVERLAY_TYPE_COMPASS);
+			}
+		});
+        startCameraTagsButton.setOnClickListener(new View.OnClickListener(	) {
+			public void onClick(View v) {
+				startCameraActivity(CameraOverlayView.OVERLAY_TYPE_TAG);
 			}
 		});
     }
     
-    private void startCameraActivity() {
+    private void startCameraActivity(int overlayType) {
     	Intent i = new Intent(this, CameraFeedActivity.class);
+    	i.putExtra(CameraFeedActivity.EXTRA_OVERLAY_TYPE, overlayType);
     	startActivity(i);
     }
 

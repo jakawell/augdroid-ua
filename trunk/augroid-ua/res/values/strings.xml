@@ -5,6 +5,7 @@
     <string name="menu_settings">Settings</string>
     <string name="title_activity_main">MainActivity</string>
     
-    <string name="view_feed">Start camera feed</string>
+    <string name="view_feed_compass">Start camera feed (compass)</string>
+    <string name="view_feed_tags">Start camera feed (tags)</string>
 
 </resources>

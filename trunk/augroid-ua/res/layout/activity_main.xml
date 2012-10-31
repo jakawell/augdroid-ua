@@ -4,11 +4,19 @@
     android:layout_height="match_parent" >
 
     <Button
-        android:id="@+id/view_feed_button"
+        android:id="@+id/view_feed_compass_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
-        android:text="@string/view_feed" />
+        android:text="@string/view_feed_compass" />
+
+    <Button
+        android:id="@+id/view_feed_tags_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/view_feed_compass_button"
+        android:text="@string/view_feed_tags" />
 
 </RelativeLayout>
