@@ -7,6 +7,7 @@
         android:minSdkVersion="10"
         android:targetSdkVersion="15" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"></uses-permission>
 	<uses-feature android:name="android.hardware.camera" />
 
     <application
@@ -23,7 +24,7 @@
         </activity>
         <activity 
             android:name="CameraFeedActivity" 
-            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:theme="@android:style/Theme.NoTitleBar"
             android:screenOrientation="landscape" >
         </activity>
     </application>

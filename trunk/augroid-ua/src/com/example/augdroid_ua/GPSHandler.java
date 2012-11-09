@@ -17,11 +17,11 @@ public class GPSHandler extends Activity {
         imListener = new ImListener();
         startListening();		// start listening for current location
         myLocation = imManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);		// gets the last known location of the phone
-        if (myLocation != null){
-        	int lat = (int) (myLocation.getLatitude() * 1E6);
-			int lng = (int) (myLocation.getLongitude() * 1E6);
-			// don't know if lat and long will be needed
-        }
+//        if (myLocation != null){
+//        	int lat = (int) (myLocation.getLatitude() * 1E6);
+//			int lng = (int) (myLocation.getLongitude() * 1E6);
+//			// don't know if lat and long will be needed
+//        }
     	stopListening();		// stop listening for current location
     	return myLocation;
 	}
