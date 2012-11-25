@@ -11,8 +11,10 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+
 
 public class CameraFeedActivity extends Activity implements SensorEventListener {
 	
@@ -24,6 +26,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	private CameraOverlayView mCameraOverlayView;
 	private FrameLayout mFrame;
 	private int mOverlayType;
+	private Location mLocation;
 	
 	private SensorManager mSensorManger;
 	private float[] mAccelerometerData = new float[3];
@@ -50,6 +53,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			public void onLocationChanged(Location location) {
 				if (mCameraOverlayView != null)
 					mCameraOverlayView.updateLocation(location);
+					mLocation = location;
 			}
 		};
 		// camera and sensors are set up in onResume()
@@ -70,6 +74,34 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			
 			mCameraOverlayView = new CameraOverlayView(this);
 			mCameraOverlayView.setupCamera(new float[] {mCamera.getParameters().getHorizontalViewAngle(), mCamera.getParameters().getVerticalViewAngle()});
+			
+			mCameraOverlayView.setOnClickListener(new View.OnClickListener() {
+	            public void onClick(View v) {
+	            	try {
+	            		/*Location testLoc = new Location("augdroid-ua.testLocProvider");
+	            		testLoc.setLatitude(33.195721);
+	            		testLoc.setLongitude(-87.535137);
+	            		
+	            		mCameraOverlayView.updateLocation(testLoc);
+	            		mLocation = testLoc;*/ // Test stuff for debugging
+	            		
+	            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
+	            		float pitch = (float)Math.toDegrees(mOrientation[1]);
+	    			
+	            		double distance = GetDistance(pitch);
+	            		Location newLoc = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
+	    			
+	            		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
+	            		mCameraOverlayView.addTag(newTag);
+	            		mCameraOverlayView.setOverlayType(mOverlayType);
+	            	}
+	            	catch (Exception ex) {
+	            		System.out.println(ex);
+	            		// If this triggers, GPS location is probably null
+	            	}
+	            }
+	        });
+			
 			mFrame.addView(mCameraOverlayView);
 			
 			setupTests();
@@ -97,15 +129,21 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		tagPathToFergLoc.setLatitude(33.215546);
 		tagPathToFergLoc.setLongitude(-87.542792);
 		
+		Location forestLake = new Location("augdroid-ua.testLocProvider");
+		forestLake.setLatitude(33.195698);
+		forestLake.setLongitude(-87.534305);
+		
 		Tag tag1 = new Tag(1, "Hello!", tag1Loc, 2.0f);
 		Tag tag2 = new Tag(2, "World!", tag2Loc, 2.0f);
 		Tag tag3 = new Tag(3, "Shelby", tagShelbyCenterLoc, 2.0f);
 		Tag tag4 = new Tag(4, "Path", tagPathToFergLoc, 2.0f);
+		Tag tag5 = new Tag(5, "Lake", forestLake, 2.0f);
 		
 		mCameraOverlayView.addTag(tag1);
 		mCameraOverlayView.addTag(tag2);
 		mCameraOverlayView.addTag(tag3);
 		mCameraOverlayView.addTag(tag4);
+		mCameraOverlayView.addTag(tag5);
 		mCameraOverlayView.setOverlayType(mOverlayType);
 	}
 	
@@ -157,6 +195,53 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		else {
 			Log.d(TAG, "Roatation matrix calculation failed.");
 		}
+	}
+	
+	public double GetDistance(double angle) {
+		// angle is in degrees
+		// need to figure out what to do if object is not in middle of screen? maybe?
+		
+		double height = 5.5; // default to 5'6" - can be changed 
+		double max = 100; // set maximum distance - can be changed
+				
+		angle = 90.0 - angle;
+		double radians = Math.toRadians(angle);
+		double distance = Math.tan(radians) * height;
+		if (angle > 90.0) {
+			distance = 100;
+		}
+		return Math.min(max, distance);
+	}
+	
+	// Assume bearing is input as degrees, and distance input as feet
+	// bearing should be clockwise from North
+	public Location CalculateLocation(double lat1, double lng1, double bearing, double distance) {
+		if (bearing < 0.0) {
+			bearing = bearing + 360.0;
+		}
+		double radius = 6371.00; // Radius of Earth in km
+		double kmDistance = distance * 0.0003048; // convert to km
+		double radiansBearing = Math.toRadians(bearing);	// convert to radians
+		double angDistance = kmDistance / radius; // angular distance
+		lat1 = Math.toRadians(lat1);
+		lng1 = Math.toRadians(lng1);
+		
+		double lat2 = Math.asin( (Math.sin(lat1) * Math.cos(angDistance)) +
+				(Math.cos(lat1)*Math.sin(angDistance)*Math.cos(radiansBearing)) );	// new lat
+		double lng2 = lng1 + Math.atan2(Math.sin(radiansBearing)*Math.sin(angDistance)*Math.cos(lat1), 
+				Math.cos(angDistance)-Math.sin(lat1)*Math.sin(lat2));				// new long
+		
+		lng2 = (lng2 + 3 * Math.PI) % (2*Math.PI) - Math.PI;	// normalize to -180...180 degrees
+		
+		lat2 = Math.toDegrees(lat2);
+		lng2 = Math.toDegrees(lng2);
+		
+		Location newLoc = new Location("augdroid-ua.testLocProvider");
+		newLoc.setLatitude(lat2);
+		newLoc.setLongitude(lng2);
+		
+		return newLoc;
+		
 	}
 	
 }

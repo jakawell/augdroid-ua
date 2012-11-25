@@ -27,4 +27,5 @@ public class Tag {
 		this.location = location;
 		this.height = height;
 	}
+	
 }
