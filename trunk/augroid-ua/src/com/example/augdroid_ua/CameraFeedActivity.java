@@ -78,12 +78,12 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			mCameraOverlayView.setOnClickListener(new View.OnClickListener() {
 	            public void onClick(View v) {
 	            	try {
-	            		Location testLoc = new Location("augdroid-ua.testLocProvider");
+	            		/*Location testLoc = new Location("augdroid-ua.testLocProvider");
 	            		testLoc.setLatitude(33.195721);
 	            		testLoc.setLongitude(-87.535137);
 	            		
 	            		mCameraOverlayView.updateLocation(testLoc);
-	            		mLocation = testLoc; // Test stuff for debugging
+	            		mLocation = testLoc; // Test stuff for debugging*/
 	            		
 	            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
 	            		float pitch = (float)Math.toDegrees(mOrientation[1]);
