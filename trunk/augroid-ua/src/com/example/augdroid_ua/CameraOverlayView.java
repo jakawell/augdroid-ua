@@ -43,7 +43,9 @@ public class CameraOverlayView extends View {
 	}
 	
 	public void refresh(float[] newOrientation) {
-		mOrientation = newOrientation;
+		if (mOrientation == null || mOrientation.length == 0) {
+			mOrientation = newOrientation;
+		}
 		invalidate();
 	}
 	

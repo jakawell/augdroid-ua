@@ -78,12 +78,12 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			mCameraOverlayView.setOnClickListener(new View.OnClickListener() {
 	            public void onClick(View v) {
 	            	try {
-	            		/*Location testLoc = new Location("augdroid-ua.testLocProvider");
+	            		Location testLoc = new Location("augdroid-ua.testLocProvider");
 	            		testLoc.setLatitude(33.195721);
 	            		testLoc.setLongitude(-87.535137);
 	            		
 	            		mCameraOverlayView.updateLocation(testLoc);
-	            		mLocation = testLoc;*/ // Test stuff for debugging
+	            		mLocation = testLoc; // Test stuff for debugging
 	            		
 	            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
 	            		float pitch = (float)Math.toDegrees(mOrientation[1]);
@@ -185,10 +185,14 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			break;
 		}
 		
+		float[] tempOrientation = new float[3];
 		if (SensorManager.getRotationMatrix(mRawRotationMatrix, null, mAccelerometerData, mMagneticData)) {
 			SensorManager.remapCoordinateSystem(mRawRotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, mRemappedRotationMatrix);
-			SensorManager.getOrientation(mRemappedRotationMatrix, mOrientation);
-			if (mCameraOverlayView != null) {
+			SensorManager.getOrientation(mRemappedRotationMatrix, tempOrientation);
+			if (mCameraOverlayView != null) {	// interpolate magnetic orientation data
+				for (int i = 0; i < tempOrientation.length - 1; i++) {
+					mOrientation[i] = (mOrientation[i] * 9 + tempOrientation[i]) / 10.0f;
+				}
 				mCameraOverlayView.refresh(mOrientation);
 			}
 		}
