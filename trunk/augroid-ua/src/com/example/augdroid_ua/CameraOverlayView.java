@@ -7,6 +7,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.location.Location;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 
 public class CameraOverlayView extends View {
@@ -23,6 +25,8 @@ public class CameraOverlayView extends View {
 	private float[] mCameraViewAngles;
 	private LinkedList<Tag> mTags = new LinkedList<Tag>();
 	
+	private GestureDetector mDragDetector;
+	
 	/**
 	 * Creates a new camera overlay object.
 	 * 
@@ -31,7 +35,7 @@ public class CameraOverlayView extends View {
 	public CameraOverlayView(Context context) {
 		super(context);
 		mOverlayType = OVERLAY_TYPE_NONE;
-		
+		mDragDetector = new GestureDetector(context, new DragListener());
 	}
 	
 	/**
@@ -59,6 +63,11 @@ public class CameraOverlayView extends View {
 	
 	public void setOverlayType(int newType) {
 		mOverlayType = newType;
+	}
+	
+	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+		return this.mDragDetector.onTouchEvent(event);
 	}
 	
 	@Override
@@ -116,7 +125,7 @@ public class CameraOverlayView extends View {
 						float bearing = mLocation.bearingTo(location);
 						float bearingDifference = bearing - azimuth; // compute the difference between the bearing of the tag and the current bearing of the phone
 						// if a tag is located at (i.e., "has its bearing at") the azimuth, it is centered at pixel width/2
-						// if a tag is lcoated 2 degree east of the azimuth, it is centered at pixel (width/2)+(2 * pixelsPerDegree)
+						// if a tag is located 2 degree east of the azimuth, it is centered at pixel (width/2)+(2 * pixelsPerDegree)
 						float horizontalDisplayPixel = ((float)width / 2.0f) + (bearingDifference * horizontalPixelsPerDegree);
 						
 						// VERTICAL HANDLING (PITCH)
@@ -154,6 +163,14 @@ public class CameraOverlayView extends View {
 			canvas.drawText("Ver. View Angle: " + mCameraViewAngles[1], 30, testTextSpacing * testTextLine++, mPaint);
 			canvas.drawText("Hor. pix. per deg.: " + horizontalPixelsPerDegree, 30, testTextSpacing * testTextLine++, mPaint);
 			canvas.drawText("Ver. pix. per deg.: " + verticalPixelsPerDegree, 30, testTextSpacing * testTextLine++, mPaint);
+		}
+	}
+	
+	private class DragListener extends GestureDetector.SimpleOnGestureListener {
+		@Override
+		public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+			
+			return true;
 		}
 	}
 }

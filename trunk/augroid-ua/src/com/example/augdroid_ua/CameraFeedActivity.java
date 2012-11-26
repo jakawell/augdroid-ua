@@ -11,6 +11,8 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.Toast;
@@ -38,6 +40,11 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	private LocationManager mLocationManager;
 	private LocationListener mLocationListener;
 	
+	private boolean mDrawNewTag;
+	private Tag mDraggedTag;
+	private GestureDetector mDragDetector;
+	
+	@SuppressWarnings("deprecation")
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -46,6 +53,9 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		mFrame = (FrameLayout)findViewById(R.id.camera_feed_preview);
 		mSensorManger = (SensorManager)getSystemService(SENSOR_SERVICE);
 		mLocationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
+		mDrawNewTag = true;
+		mDraggedTag = null;
+		mDragDetector = new GestureDetector(new DragListener());
 		mLocationListener = new LocationListener() {
 			public void onStatusChanged(String provider, int status, Bundle extras) { }
 			public void onProviderEnabled(String provider) { }
@@ -59,6 +69,25 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		// camera and sensors are set up in onResume()
 		Bundle extras = getIntent().getExtras();
 		mOverlayType = extras.getInt(EXTRA_OVERLAY_TYPE);
+	}
+	
+	private void onDrag(MotionEvent event, float distanceX, float distanceY) {
+		mDrawNewTag = false;
+		if (mDraggedTag != null) {
+			// update mDraggedTag
+		}
+	}
+	
+	/**
+	 * Get the tag under the pixels (x, y). Return null if no tag is under those points.
+	 * @param x
+	 * @param y
+	 * @return
+	 */
+	private Tag getTag(float x, float y) {
+		Tag result = null;
+		
+		return result;
 	}
 
 	private void setupCamera() {
@@ -75,32 +104,41 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			mCameraOverlayView = new CameraOverlayView(this);
 			mCameraOverlayView.setupCamera(new float[] {mCamera.getParameters().getHorizontalViewAngle(), mCamera.getParameters().getVerticalViewAngle()});
 			
-			mCameraOverlayView.setOnClickListener(new View.OnClickListener() {
-	            public void onClick(View v) {
-	            	try {
-	            		/*Location testLoc = new Location("augdroid-ua.testLocProvider");
-	            		testLoc.setLatitude(33.195721);
-	            		testLoc.setLongitude(-87.535137);
-	            		
-	            		mCameraOverlayView.updateLocation(testLoc);
-	            		mLocation = testLoc; // Test stuff for debugging*/
-	            		
-	            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
-	            		float pitch = (float)Math.toDegrees(mOrientation[1]);
-	    			
-	            		double distance = GetDistance(pitch);
-	            		Location newLoc = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
-	    			
-	            		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
-	            		mCameraOverlayView.addTag(newTag);
-	            		mCameraOverlayView.setOverlayType(mOverlayType);
-	            	}
-	            	catch (Exception ex) {
-	            		System.out.println(ex);
-	            		// If this triggers, GPS location is probably null
-	            	}
-	            }
-	        });
+			mCameraOverlayView.setOnTouchListener(new View.OnTouchListener() {
+				public boolean onTouch(View v, MotionEvent event) {
+					int action = event.getAction();
+					if (action == MotionEvent.ACTION_DOWN) {
+						mDraggedTag = getTag(event.getX(), event.getY());
+					}
+					else if (action == MotionEvent.ACTION_UP && mDrawNewTag) {
+						try {
+		            		/*Location testLoc = new Location("augdroid-ua.testLocProvider");
+		            		testLoc.setLatitude(33.195721);
+		            		testLoc.setLongitude(-87.535137);
+		            		
+		            		mCameraOverlayView.updateLocation(testLoc);
+		            		mLocation = testLoc; // Test stuff for debugging*/
+		            		
+		            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
+		            		float pitch = (float)Math.toDegrees(mOrientation[1]);
+		    			
+		            		double distance = GetDistance(pitch);
+		            		Location newLoc = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
+		    			
+		            		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
+		            		mCameraOverlayView.addTag(newTag);
+		            		mCameraOverlayView.setOverlayType(mOverlayType);
+		            	}
+		            	catch (Exception ex) {
+		            		Log.e(TAG, ex.getMessage());
+		            		// If this triggers, GPS location is probably null
+		            	}
+						mDrawNewTag = true;
+						mDraggedTag = null;
+					}
+					return true;
+				}
+			});
 			
 			mFrame.addView(mCameraOverlayView);
 			
@@ -153,6 +191,12 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			mCamera = null;
 		}
 	}
+	
+	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+		return this.mDragDetector.onTouchEvent(event);
+	}
+	
 
 	@Override
 	protected void onResume() {
@@ -246,6 +290,14 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		
 		return newLoc;
 		
+	}
+	
+	private class DragListener extends GestureDetector.SimpleOnGestureListener {
+		@Override
+		public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+			onDrag(e1, distanceX, distanceY);
+			return true;
+		}
 	}
 	
 }
