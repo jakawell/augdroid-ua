@@ -35,7 +35,7 @@ public class CameraOverlayView extends View {
 	public CameraOverlayView(Context context) {
 		super(context);
 		mOverlayType = OVERLAY_TYPE_NONE;
-		mDragDetector = new GestureDetector(context, new DragListener());
+		//mDragDetector = new GestureDetector(context, new DragListener());
 	}
 	
 	/**
@@ -65,10 +65,10 @@ public class CameraOverlayView extends View {
 		mOverlayType = newType;
 	}
 	
-	@Override
-	public boolean onTouchEvent(MotionEvent event) {
-		return this.mDragDetector.onTouchEvent(event);
-	}
+//	@Override
+//	public boolean onTouchEvent(MotionEvent event) {
+//		return this.mDragDetector.onTouchEvent(event);
+//	}
 	
 	@Override
 	public void onDraw(Canvas canvas) {
@@ -140,11 +140,11 @@ public class CameraOverlayView extends View {
 						String tagText = "Tag " + i + ": " + bearing + "deg., " + distance + " m";
 						if (radiusDisplaySize > 2 && horizontalDisplayPixel > 0 - radiusDisplaySize && verticalDisplayPixel > 0 - radiusDisplaySize && horizontalDisplayPixel < width + radiusDisplaySize && verticalDisplayPixel < height + radiusDisplaySize) { // if any part of the tag would be visible
 							canvas.drawCircle(horizontalDisplayPixel, verticalDisplayPixel, radiusDisplaySize, mPaint);
-							canvas.drawText(tagText + " (VISIBLE)", 30, testTextSpacing * testTextLine++, mPaint);
+							//canvas.drawText(tagText + " (VISIBLE)", 30, testTextSpacing * testTextLine++, mPaint);
 						}
-						else
-							canvas.drawText(tagText + " (NOT VISIBLE)", 30, testTextSpacing * testTextLine++, mPaint);
-						
+						else {
+							//canvas.drawText(tagText + " (NOT VISIBLE)", 30, testTextSpacing * testTextLine++, mPaint);
+						}
 						
 					}
 				}
@@ -166,11 +166,11 @@ public class CameraOverlayView extends View {
 		}
 	}
 	
-	private class DragListener extends GestureDetector.SimpleOnGestureListener {
-		@Override
-		public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-			
-			return true;
-		}
-	}
+	//private class DragListener extends GestureDetector.SimpleOnGestureListener {
+	//	@Override
+	//	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+	//		
+	//		return true;
+	//	}
+	//}
 }

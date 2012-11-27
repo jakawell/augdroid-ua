@@ -71,24 +71,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		mOverlayType = extras.getInt(EXTRA_OVERLAY_TYPE);
 	}
 	
-	private void onDrag(MotionEvent event, float distanceX, float distanceY) {
-		mDrawNewTag = false;
-		if (mDraggedTag != null) {
-			// update mDraggedTag
-		}
-	}
 	
-	/**
-	 * Get the tag under the pixels (x, y). Return null if no tag is under those points.
-	 * @param x
-	 * @param y
-	 * @return
-	 */
-	private Tag getTag(float x, float y) {
-		Tag result = null;
-		
-		return result;
-	}
 
 	private void setupCamera() {
 		try {
@@ -104,41 +87,44 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			mCameraOverlayView = new CameraOverlayView(this);
 			mCameraOverlayView.setupCamera(new float[] {mCamera.getParameters().getHorizontalViewAngle(), mCamera.getParameters().getVerticalViewAngle()});
 			
-			mCameraOverlayView.setOnTouchListener(new View.OnTouchListener() {
-				public boolean onTouch(View v, MotionEvent event) {
-					int action = event.getAction();
-					if (action == MotionEvent.ACTION_DOWN) {
-						mDraggedTag = getTag(event.getX(), event.getY());
-					}
-					else if (action == MotionEvent.ACTION_UP && mDrawNewTag) {
-						try {
-		            		/*Location testLoc = new Location("augdroid-ua.testLocProvider");
-		            		testLoc.setLatitude(33.195721);
-		            		testLoc.setLongitude(-87.535137);
-		            		
-		            		mCameraOverlayView.updateLocation(testLoc);
-		            		mLocation = testLoc; // Test stuff for debugging*/
-		            		
-		            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
-		            		float pitch = (float)Math.toDegrees(mOrientation[1]);
-		    			
-		            		double distance = GetDistance(pitch);
-		            		Location newLoc = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
-		    			
-		            		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
-		            		mCameraOverlayView.addTag(newTag);
-		            		mCameraOverlayView.setOverlayType(mOverlayType);
-		            	}
-		            	catch (Exception ex) {
-		            		Log.e(TAG, ex.getMessage());
-		            		// If this triggers, GPS location is probably null
-		            	}
-						mDrawNewTag = true;
-						mDraggedTag = null;
-					}
-					return true;
-				}
-			});
+//			mCameraOverlayView.setOnTouchListener(new View.OnTouchListener() {
+//				public boolean onTouch(View v, MotionEvent event) {
+//					int action = event.getAction();
+//					if (action == MotionEvent.ACTION_DOWN) {
+//						mDraggedTag = getTag(event.getX(), event.getY());
+//						if (mDraggedTag != null) {
+//							mDrawNewTag = false;
+//						}
+//					}
+//					else if (action == MotionEvent.ACTION_UP && mDrawNewTag) {
+//						try {
+//		            		Location testLoc = new Location("augdroid-ua.testLocProvider");
+//		            		testLoc.setLatitude(33.195721);
+//		            		testLoc.setLongitude(-87.535137);
+//		            		
+//		            		mCameraOverlayView.updateLocation(testLoc);
+//		            		mLocation = testLoc; // Test stuff for debugging*/
+//		            		
+//		            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
+//		            		float pitch = (float)Math.toDegrees(mOrientation[1]);
+//		    			
+//		            		double distance = GetDistance(pitch);
+//		            		Location newLoc = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
+//		    			
+//		            		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
+//		            		mCameraOverlayView.addTag(newTag);
+//		            		mCameraOverlayView.setOverlayType(mOverlayType);
+//		            	}
+//		            	catch (Exception ex) {
+//		            		Log.e(TAG, ex.getMessage());
+//		            		// If this triggers, GPS location is probably null
+//		            	}
+//						mDrawNewTag = true;
+//						mDraggedTag = null;
+//					}
+//					return true;
+//				}
+//			});
 			
 			mFrame.addView(mCameraOverlayView);
 			
@@ -194,7 +180,10 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
+		try {
 		return this.mDragDetector.onTouchEvent(event);
+		}
+		catch (Exception e) {return false;}
 	}
 	
 
@@ -292,10 +281,78 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		
 	}
 	
+	private void onDrag(MotionEvent event, float distanceX, float distanceY) {
+		mDrawNewTag = false;
+		if (mDraggedTag != null) {
+			// update mDraggedTag
+		}
+	}
+	
+	/**
+	 * Get the tag under the pixels (x, y). Return null if no tag is under those points.
+	 * @param x
+	 * @param y
+	 * @return
+	 */
+	private Tag getTag(float x, float y) {
+		Tag result = null;
+		
+		return result;
+	}
+	
 	private class DragListener extends GestureDetector.SimpleOnGestureListener {
 		@Override
 		public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
 			onDrag(e1, distanceX, distanceY);
+			return true;
+		}
+		
+		@Override
+		public boolean onDown(MotionEvent me) {
+			return false;
+		}
+		
+		@Override
+		public boolean onFling(MotionEvent start, MotionEvent finish, float xVelocity, float yVelocity) {
+			return false;
+		}
+		
+		@Override
+		public void onLongPress(MotionEvent me) {
+
+		}
+		
+		@Override
+		public void onShowPress(MotionEvent me) {
+
+		}
+		
+		@Override
+		public boolean onSingleTapUp(MotionEvent me) {
+				try {
+            		Location testLoc = new Location("augdroid-ua.testLocProvider");
+            		testLoc.setLatitude(33.195721);
+            		testLoc.setLongitude(-87.535137);
+            		
+            		mCameraOverlayView.updateLocation(testLoc);
+            		mLocation = testLoc; // Test stuff for debugging*/
+            		
+            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
+            		float pitch = (float)Math.toDegrees(mOrientation[1]);
+    			
+            		double distance = GetDistance(pitch);
+            		Location newLoc = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
+    			
+            		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
+            		mCameraOverlayView.addTag(newTag);
+            		mCameraOverlayView.setOverlayType(mOverlayType);
+            	}
+            	catch (Exception ex) {
+            		Log.e(TAG, ex.getMessage());
+            		// If this triggers, GPS location is probably null
+            	}
+				mDrawNewTag = true;
+				mDraggedTag = null;
 			return true;
 		}
 	}
