@@ -7,8 +7,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.location.Location;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
 import android.view.View;
 
 public class CameraOverlayView extends View {
@@ -19,37 +17,35 @@ public class CameraOverlayView extends View {
 	
 	private Paint mPaint = new Paint();
 	private int mOverlayType;
+	private int mWidth;
+	private int mHeight;
+	private float mHorizontalPixelsPerDegree;
+	private float mVerticalPixelsPerDegree;
 	
 	private float[] mOrientation = null;
 	private Location mLocation;
 	private float[] mCameraViewAngles;
 	private LinkedList<Tag> mTags = new LinkedList<Tag>();
 	
-	private GestureDetector mDragDetector;
-	
 	/**
 	 * Creates a new camera overlay object.
 	 * 
 	 * @param context	the context of this overlay
 	 */
-	public CameraOverlayView(Context context) {
+	public CameraOverlayView(Context context, float horizontalCameraViewAngle, float verticalCameraViewAngle) {
 		super(context);
 		mOverlayType = OVERLAY_TYPE_NONE;
-		//mDragDetector = new GestureDetector(context, new DragListener());
-	}
-	
-	/**
-	 * 
-	 * @param cameraViewAngles	the angles that the camera can see (in degrees), with horizontal first, then vertical
-	 */
-	public void setupCamera(float[] cameraViewAngles) {
-		this.mCameraViewAngles = cameraViewAngles;
+		mCameraViewAngles = new float[] { horizontalCameraViewAngle, verticalCameraViewAngle };
+		mCameraViewAngles[0] = horizontalCameraViewAngle;
+		mCameraViewAngles[1] = verticalCameraViewAngle;
+		mWidth = getWidth();
+		mHeight = getHeight();
+		mHorizontalPixelsPerDegree = (float)mWidth / mCameraViewAngles[0];
+		mVerticalPixelsPerDegree = (float)mHeight / mCameraViewAngles[1];
 	}
 	
 	public void refresh(float[] newOrientation) {
-		if (mOrientation == null || mOrientation.length == 0) {
-			mOrientation = newOrientation;
-		}
+		mOrientation = newOrientation;
 		invalidate();
 	}
 	
@@ -65,22 +61,34 @@ public class CameraOverlayView extends View {
 		mOverlayType = newType;
 	}
 	
-//	@Override
-//	public boolean onTouchEvent(MotionEvent event) {
-//		return this.mDragDetector.onTouchEvent(event);
-//	}
+	public Tag getTagAtPoint(int x, int y) {
+		for (Tag tag : mTags) {
+			if (tag.screenVisible)
+				if (((x - tag.screenLocationX) ^ 2 + (y - tag.screenLocationY) ^ 2) <= (tag.screenRadius ^ 2))
+					return tag;
+		}
+		return null;
+	}
+	
+	public float[] getScreenInfo() {
+		return new float[]{(float)mWidth, (float)mHeight, mHorizontalPixelsPerDegree, mVerticalPixelsPerDegree};
+	}
 	
 	@Override
 	public void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
-		int height = getHeight();
-		int width = getWidth();
-		float horizontalPixelsPerDegree = (float)width / mCameraViewAngles[0];
-		float verticalPixelsPerDegree = (float)height / mCameraViewAngles[1];
 		
 		// TODO: REMOVE. This tracks the next y coordinate for text to be displayed on screen 
 		int testTextLine = 1;
 		int testTextSpacing = 30;
+		
+		if (mOverlayType == OVERLAY_TYPE_COMPASS) {
+			float azimuth = (float)Math.toDegrees(mOrientation[0]);
+			if (azimuth < 40 && azimuth > -40) {
+				mPaint.setStyle(Paint.Style.FILL);
+				canvas.drawCircle(((float)mWidth / 2.0f) - (((azimuth * 2.5f)/100.0f)*((float)mWidth/2.0f)), mHeight / 2, 50, mPaint);
+			}
+		}
 		
 		if (mLocation == null) {
 			mPaint.setColor(Color.RED);
@@ -96,53 +104,63 @@ public class CameraOverlayView extends View {
 			mPaint.setTextSize(24);
 			
 			switch (mOverlayType) {
-			case OVERLAY_TYPE_COMPASS:
-				if (azimuth < 40 && azimuth > -40) {
-					mPaint.setStyle(Paint.Style.FILL);
-					canvas.drawCircle(((float)width / 2.0f) - (((azimuth * 2.5f)/100.0f)*((float)width/2.0f)), height / 2, 50, mPaint);
-				}
-				break;
 			case OVERLAY_TYPE_TAG:
 				if (mLocation != null && !mTags.isEmpty()) {
 					for (int i = 0; i < mTags.size(); i++) {
 						Tag tag =  mTags.get(i);
 						Location location = tag.location;
 						float tagHeight = tag.height;
-						
-						// SIZE HANDLING (DISTANCE)
-						float radiusTrueSize = 1.5f; // in meters
-						float distance = mLocation.distanceTo(location);
-						// the "angular size" is how large an object appears, measured in degrees of visual field, based on the true size of
-						// the object and the distance to the object. The equation is: angularSize = 2 * arctan(size / 2*distance)
-						float angularSize = 2.0f * (float)Math.atan(radiusTrueSize / (2.0f * distance));
-						angularSize = (float)Math.toDegrees(angularSize); // convert from radians to degrees
-						// to get the size in pixels, we take the percentage of the camera's field of view that the angular size takes up, 
-						// and multiply that by the size of the screen. NOTE: I am using the vertical field of view and height, but I could 
-						// use the horizontal field of view and width, and maybe get a different number (maybe).
-						float radiusDisplaySize = (angularSize / mCameraViewAngles[1]) * (float)height;
 
-						// HORIZONTAL HANDLING (AZIMUTH)
-						float bearing = mLocation.bearingTo(location);
-						float bearingDifference = bearing - azimuth; // compute the difference between the bearing of the tag and the current bearing of the phone
-						// if a tag is located at (i.e., "has its bearing at") the azimuth, it is centered at pixel width/2
-						// if a tag is located 2 degree east of the azimuth, it is centered at pixel (width/2)+(2 * pixelsPerDegree)
-						float horizontalDisplayPixel = ((float)width / 2.0f) + (bearingDifference * horizontalPixelsPerDegree);
+						float horizontalDisplayPixel, verticalDisplayPixel, radiusDisplaySize;
+						if (tag.forceScreenLocation) { // if we're forcing the location (user is controlling the location by dragging), don't calculate
+							horizontalDisplayPixel = (float)tag.screenLocationX;
+							verticalDisplayPixel = (float)tag.screenLocationY;
+							radiusDisplaySize = (float)tag.screenRadius;
+						}
+						else {
+							// SIZE HANDLING (DISTANCE)
+							float radiusTrueSize = 1.5f; // in meters
+							float distance = mLocation.distanceTo(location);
+							// the "angular size" is how large an object appears, measured in degrees of visual field, based on the true size of
+							// the object and the distance to the object. The equation is: angularSize = 2 * arctan(size / 2*distance)
+							float angularSize = 2.0f * (float)Math.atan(radiusTrueSize / (2.0f * distance));
+							angularSize = (float)Math.toDegrees(angularSize); // convert from radians to degrees
+							// to get the size in pixels, we take the percentage of the camera's field of view that the angular size takes up, 
+							// and multiply that by the size of the screen. NOTE: I am using the vertical field of view and height, but I could 
+							// use the horizontal field of view and width, and maybe get a different number (maybe).
+							radiusDisplaySize = (angularSize / mCameraViewAngles[1]) * (float)mHeight;
+							
+							// HORIZONTAL HANDLING (AZIMUTH)
+							float bearing = mLocation.bearingTo(location);
+							float bearingDifference = bearing - azimuth; // compute the difference between the bearing of the tag and the current bearing of the phone
+							// if a tag is located at (i.e., "has its bearing at") the azimuth, it is centered at pixel width/2
+							// if a tag is located 2 degree east of the azimuth, it is centered at pixel (width/2)+(2 * pixelsPerDegree)
+							horizontalDisplayPixel = ((float)mWidth / 2.0f) + (bearingDifference * mHorizontalPixelsPerDegree);
+							
+							// VERTICAL HANDLING (PITCH)
+							// the raw position (without the tag's height factored in) is found exactly as above
+							verticalDisplayPixel = ((float)mHeight / 2.0f) - (pitch * mVerticalPixelsPerDegree);
+							// ...then we calculate the tag's height (using the angular size, as in "size handling"), and add it to the position
+							float heightAngularSize = 2.0f * (float)Math.atan(tagHeight / (2.0f * distance));
+							heightAngularSize = (float)Math.toDegrees(heightAngularSize);
+							float heightAddedPixels = (heightAngularSize / mCameraViewAngles[1]) * (float)mHeight;
+							verticalDisplayPixel += heightAddedPixels;
+						}
 						
-						// VERTICAL HANDLING (PITCH)
-						// the raw position (with out the tag's height factored in) is found exactly as above
-						float verticalDisplayPixel = ((float)height / 2.0f) - (pitch * verticalPixelsPerDegree);
-						// ...then we calculate the tag's height (using the angular size, as in "size handling"), and add it to the position
-						float heightAngularSize = 2.0f * (float)Math.atan(tagHeight / (2.0f * distance));
-						heightAngularSize = (float)Math.toDegrees(heightAngularSize);
-						float heightAddedPixels = (heightAngularSize / mCameraViewAngles[1]) * (float)height;
-						verticalDisplayPixel += heightAddedPixels;
-						
-						String tagText = "Tag " + i + ": " + bearing + "deg., " + distance + " m";
-						if (radiusDisplaySize > 2 && horizontalDisplayPixel > 0 - radiusDisplaySize && verticalDisplayPixel > 0 - radiusDisplaySize && horizontalDisplayPixel < width + radiusDisplaySize && verticalDisplayPixel < height + radiusDisplaySize) { // if any part of the tag would be visible
+//						String tagText = "Tag " + i + ": " + bearing + "deg., " + distance + " m";
+						if (radiusDisplaySize > 2 && horizontalDisplayPixel > 0 - radiusDisplaySize && verticalDisplayPixel > 0 - radiusDisplaySize && horizontalDisplayPixel < mWidth + radiusDisplaySize && verticalDisplayPixel < mHeight + radiusDisplaySize) { // if any part of the tag would be visible
+							if (tag.forceScreenLocation) {
+								int oldColor = mPaint.getColor();
+								mPaint.setColor(Color.YELLOW);
+								canvas.drawCircle(horizontalDisplayPixel, verticalDisplayPixel, radiusDisplaySize + 3, mPaint);
+								mPaint.setColor(oldColor);
+							}
+							tag.setOnScreen((int)horizontalDisplayPixel, (int)verticalDisplayPixel, (int)radiusDisplaySize);
 							canvas.drawCircle(horizontalDisplayPixel, verticalDisplayPixel, radiusDisplaySize, mPaint);
 							//canvas.drawText(tagText + " (VISIBLE)", 30, testTextSpacing * testTextLine++, mPaint);
 						}
 						else {
+							tag.setOffScreen();
 							//canvas.drawText(tagText + " (NOT VISIBLE)", 30, testTextSpacing * testTextLine++, mPaint);
 						}
 						
@@ -161,16 +179,8 @@ public class CameraOverlayView extends View {
 			
 			canvas.drawText("Hor. View Angle: " + mCameraViewAngles[0], 30, testTextSpacing * testTextLine++, mPaint);
 			canvas.drawText("Ver. View Angle: " + mCameraViewAngles[1], 30, testTextSpacing * testTextLine++, mPaint);
-			canvas.drawText("Hor. pix. per deg.: " + horizontalPixelsPerDegree, 30, testTextSpacing * testTextLine++, mPaint);
-			canvas.drawText("Ver. pix. per deg.: " + verticalPixelsPerDegree, 30, testTextSpacing * testTextLine++, mPaint);
+			canvas.drawText("Hor. pix. per deg.: " + mHorizontalPixelsPerDegree, 30, testTextSpacing * testTextLine++, mPaint);
+			canvas.drawText("Ver. pix. per deg.: " + mVerticalPixelsPerDegree, 30, testTextSpacing * testTextLine++, mPaint);
 		}
 	}
-	
-	//private class DragListener extends GestureDetector.SimpleOnGestureListener {
-	//	@Override
-	//	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-	//		
-	//		return true;
-	//	}
-	//}
 }

@@ -14,6 +14,7 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnTouchListener;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
@@ -40,9 +41,9 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	private LocationManager mLocationManager;
 	private LocationListener mLocationListener;
 	
-	private boolean mDrawNewTag;
 	private Tag mDraggedTag;
 	private GestureDetector mDragDetector;
+	private OnTouchListener mTouchListener; // this is only to handle when a finger leaves the screen for the end of dragging motions
 	
 	@SuppressWarnings("deprecation")
 	@Override
@@ -53,9 +54,18 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		mFrame = (FrameLayout)findViewById(R.id.camera_feed_preview);
 		mSensorManger = (SensorManager)getSystemService(SENSOR_SERVICE);
 		mLocationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
-		mDrawNewTag = true;
 		mDraggedTag = null;
 		mDragDetector = new GestureDetector(new DragListener());
+		mTouchListener = new View.OnTouchListener() {
+			public boolean onTouch(View v, MotionEvent event) {
+				if (mDragDetector.onTouchEvent(event)) // let the drag detector try to handle it first
+					return true;
+				if (event.getAction() == MotionEvent.ACTION_UP) // if it wasn't handled by the drag detector above, check if it's and UP and that we were dragging something
+					if (mDraggedTag != null)
+						finishDrag(event);
+				return false;
+			}
+		};
 		mLocationListener = new LocationListener() {
 			public void onStatusChanged(String provider, int status, Bundle extras) { }
 			public void onProviderEnabled(String provider) { }
@@ -84,8 +94,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			mCameraFeedView = new CameraFeedView(this, mCamera);
 			mFrame.addView(mCameraFeedView);
 			
-			mCameraOverlayView = new CameraOverlayView(this);
-			mCameraOverlayView.setupCamera(new float[] {mCamera.getParameters().getHorizontalViewAngle(), mCamera.getParameters().getVerticalViewAngle()});
+			mCameraOverlayView = new CameraOverlayView(this, mCamera.getParameters().getHorizontalViewAngle(), mCamera.getParameters().getVerticalViewAngle());
 			
 //			mCameraOverlayView.setOnTouchListener(new View.OnTouchListener() {
 //				public boolean onTouch(View v, MotionEvent event) {
@@ -131,6 +140,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			setupTests();
 		} catch (Exception e) {
 			// camera not available (in use)
+			e.printStackTrace();
 			Toast.makeText(this, "Camera not available", Toast.LENGTH_LONG).show();
 			this.finish();
 		}
@@ -282,22 +292,38 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	}
 	
 	private void onDrag(MotionEvent event, float distanceX, float distanceY) {
-		mDrawNewTag = false;
+		mDraggedTag = mCameraOverlayView.getTagAtPoint((int)event.getX(), (int)event.getY());
 		if (mDraggedTag != null) {
-			// update mDraggedTag
+			mDraggedTag.forceLocation(mDraggedTag.screenLocationX + (int)distanceX, mDraggedTag.screenLocationY + (int)distanceY, mLocation.distanceTo(mDraggedTag.location));
 		}
 	}
 	
-	/**
-	 * Get the tag under the pixels (x, y). Return null if no tag is under those points.
-	 * @param x
-	 * @param y
-	 * @return
-	 */
-	private Tag getTag(float x, float y) {
-		Tag result = null;
+	private void finishDrag(MotionEvent event) {
+		float azimuth = (float)Math.toDegrees(mOrientation[0]);
+		float pitch = (float)Math.toDegrees(mOrientation[1]);
+		float[] screenInfo = mCameraOverlayView.getScreenInfo();
+		float width = screenInfo[0];
+		float height = screenInfo[1];
+		float horizontalPixelsPerDegree = screenInfo[2];
+		float verticalPixelsPerDegree = screenInfo[3];
+		float lastX = event.getX();
+		float lastY = event.getY();
+		float oldLocation = mDraggedTag.screenOldDistance * 3.28084f;		
 		
-		return result;
+		float rawNewLocationHorizontalInDegrees = azimuth - (((width / 2) - lastX) * horizontalPixelsPerDegree);
+		float rawNewLocationVerticalInDegrees = pitch - (((height / 2) - lastY) * verticalPixelsPerDegree);
+		if (rawNewLocationHorizontalInDegrees > 180)
+			rawNewLocationHorizontalInDegrees = rawNewLocationHorizontalInDegrees % -180f;
+		if (rawNewLocationHorizontalInDegrees < 180)
+			rawNewLocationHorizontalInDegrees = rawNewLocationHorizontalInDegrees % 180f;
+		if (rawNewLocationVerticalInDegrees > 180)
+			rawNewLocationVerticalInDegrees = rawNewLocationVerticalInDegrees % -180f;
+		if (rawNewLocationVerticalInDegrees < 180)
+			rawNewLocationVerticalInDegrees = rawNewLocationVerticalInDegrees % 180f;
+		Location newLocation = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), rawNewLocationHorizontalInDegrees, oldLocation);
+		mDraggedTag.location = newLocation;
+		mDraggedTag.releaseForceLocation();
+		mDraggedTag = null;
 	}
 	
 	private class DragListener extends GestureDetector.SimpleOnGestureListener {
@@ -309,7 +335,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		
 		@Override
 		public boolean onDown(MotionEvent me) {
-			return false;
+			return true;
 		}
 		
 		@Override
@@ -351,7 +377,6 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
             		Log.e(TAG, ex.getMessage());
             		// If this triggers, GPS location is probably null
             	}
-				mDrawNewTag = true;
 				mDraggedTag = null;
 			return true;
 		}
