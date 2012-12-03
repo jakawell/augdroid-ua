@@ -23,6 +23,7 @@ public class CameraOverlayView extends View {
 	private float mVerticalPixelsPerDegree;
 	
 	private float[] mOrientation = null;
+	private double mDistance = 0;
 	private Location mLocation;
 	private float[] mCameraViewAngles;
 	private LinkedList<Tag> mTags = new LinkedList<Tag>();
@@ -53,6 +54,11 @@ public class CameraOverlayView extends View {
 		mLocation = newLocation;
 	}
 	
+	public void updateDistance(double newDistance) {
+		int roundedDistance = (int)(newDistance * 10);
+		mDistance = roundedDistance / 10.0d;
+	}
+	
 	public void addTag(Tag tag) {
 		mTags.add(tag);
 	}
@@ -77,33 +83,39 @@ public class CameraOverlayView extends View {
 	@Override
 	public void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
-		
-		// TODO: REMOVE. This tracks the next y coordinate for text to be displayed on screen 
-		int testTextLine = 1;
-		int testTextSpacing = 30;
-		
-		if (mOverlayType == OVERLAY_TYPE_COMPASS) {
-			float azimuth = (float)Math.toDegrees(mOrientation[0]);
-			if (azimuth < 40 && azimuth > -40) {
-				mPaint.setStyle(Paint.Style.FILL);
-				canvas.drawCircle(((float)mWidth / 2.0f) - (((azimuth * 2.5f)/100.0f)*((float)mWidth/2.0f)), mHeight / 2, 50, mPaint);
-			}
-		}
+		mWidth = getWidth();
+		mHeight = getHeight();
+		mHorizontalPixelsPerDegree = (float)mWidth / mCameraViewAngles[0];
+		mVerticalPixelsPerDegree = (float)mHeight / mCameraViewAngles[1];
 		
 		if (mLocation == null) {
 			mPaint.setColor(Color.RED);
 			mPaint.setTextSize(32);
-			canvas.drawText("Aquiring GPS...", 30, 30, mPaint);
+			canvas.drawText("Aquiring GPS...", 15, 30, mPaint);
 		}
 		else if (mOrientation != null) {
-//			String testBox = "azimuth:\t " + mOrientation[0] + "\n   pitch:\t " + mOrientation[1] + "\n   roll:\t " + mOrientation[2];
-//			float azimuth = ((float)Math.round(Math.toDegrees(mOrientation[0]) * 2)) / 2.0f;
+			mPaint.setColor(Color.DKGRAY); // draw cross hairs
+			canvas.drawLine((mWidth / 2), (mHeight / 2) + 15, (mWidth / 2), (mHeight / 2) + 35, mPaint);
+			canvas.drawLine((mWidth / 2), (mHeight / 2) - 15, (mWidth / 2), (mHeight / 2) - 35, mPaint);
+			canvas.drawLine((mWidth / 2) + 15, (mHeight / 2), (mWidth / 2) + 35, (mHeight / 2), mPaint);
+			canvas.drawLine((mWidth / 2) - 15, (mHeight / 2), (mWidth / 2) - 35, (mHeight / 2), mPaint);
+			
+			mPaint.setColor(Color.RED);
+			mPaint.setTextSize(32);
+			canvas.drawText("Distance: " + mDistance + "feet", 15, 30, mPaint);
+			
 			float azimuth = (float)Math.toDegrees(mOrientation[0]);
 			float pitch = (float)Math.toDegrees(mOrientation[1]);
 			mPaint.setColor(Color.RED);
 			mPaint.setTextSize(24);
 			
 			switch (mOverlayType) {
+			case OVERLAY_TYPE_COMPASS:
+				if (azimuth < 40 && azimuth > -40) {
+					mPaint.setStyle(Paint.Style.FILL);
+					canvas.drawCircle(((float)mWidth / 2.0f) - (((azimuth * 2.5f)/100.0f)*((float)mWidth/2.0f)), mHeight / 2, 50, mPaint);
+				}
+				break;
 			case OVERLAY_TYPE_TAG:
 				if (mLocation != null && !mTags.isEmpty()) {
 					for (int i = 0; i < mTags.size(); i++) {
@@ -147,21 +159,18 @@ public class CameraOverlayView extends View {
 							verticalDisplayPixel += heightAddedPixels;
 						}
 						
-//						String tagText = "Tag " + i + ": " + bearing + "deg., " + distance + " m";
 						if (radiusDisplaySize > 2 && horizontalDisplayPixel > 0 - radiusDisplaySize && verticalDisplayPixel > 0 - radiusDisplaySize && horizontalDisplayPixel < mWidth + radiusDisplaySize && verticalDisplayPixel < mHeight + radiusDisplaySize) { // if any part of the tag would be visible
 							if (tag.forceScreenLocation) {
 								int oldColor = mPaint.getColor();
-								mPaint.setColor(Color.YELLOW);
+								mPaint.setColor(Color.YELLOW); // add yellow border to show that tag is selected
 								canvas.drawCircle(horizontalDisplayPixel, verticalDisplayPixel, radiusDisplaySize + 3, mPaint);
 								mPaint.setColor(oldColor);
 							}
 							tag.setOnScreen((int)horizontalDisplayPixel, (int)verticalDisplayPixel, (int)radiusDisplaySize);
 							canvas.drawCircle(horizontalDisplayPixel, verticalDisplayPixel, radiusDisplaySize, mPaint);
-							//canvas.drawText(tagText + " (VISIBLE)", 30, testTextSpacing * testTextLine++, mPaint);
 						}
 						else {
 							tag.setOffScreen();
-							//canvas.drawText(tagText + " (NOT VISIBLE)", 30, testTextSpacing * testTextLine++, mPaint);
 						}
 						
 					}
@@ -171,16 +180,6 @@ public class CameraOverlayView extends View {
 			default:
 				break;
 			}
-			mPaint.setColor(Color.GREEN);
-			String testBoxAzimuth = "azimuth: " + azimuth;
-			String testBoxPitch =   "pitch:   " + pitch;
-			canvas.drawText(testBoxAzimuth, 30, testTextSpacing * testTextLine++, mPaint);
-			canvas.drawText(testBoxPitch, 30, testTextSpacing * testTextLine++, mPaint);
-			
-			canvas.drawText("Hor. View Angle: " + mCameraViewAngles[0], 30, testTextSpacing * testTextLine++, mPaint);
-			canvas.drawText("Ver. View Angle: " + mCameraViewAngles[1], 30, testTextSpacing * testTextLine++, mPaint);
-			canvas.drawText("Hor. pix. per deg.: " + mHorizontalPixelsPerDegree, 30, testTextSpacing * testTextLine++, mPaint);
-			canvas.drawText("Ver. pix. per deg.: " + mVerticalPixelsPerDegree, 30, testTextSpacing * testTextLine++, mPaint);
 		}
 	}
 }

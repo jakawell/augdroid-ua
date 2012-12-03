@@ -58,6 +58,7 @@ public class Tag {
 		this.screenVisible = true;
 		this.screenLocationX = screenLocationX;
 		this.screenLocationY = screenLocationY;
+		this.screenRadius = screenRadius;
 	}
 	
 	public void setOffScreen() {

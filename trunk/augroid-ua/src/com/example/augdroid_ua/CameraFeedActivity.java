@@ -45,7 +45,6 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	private GestureDetector mDragDetector;
 	private OnTouchListener mTouchListener; // this is only to handle when a finger leaves the screen for the end of dragging motions
 	
-	@SuppressWarnings("deprecation")
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -55,17 +54,19 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		mSensorManger = (SensorManager)getSystemService(SENSOR_SERVICE);
 		mLocationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
 		mDraggedTag = null;
-		mDragDetector = new GestureDetector(new DragListener());
+		mDragDetector = new GestureDetector(this, new DragListener());
 		mTouchListener = new View.OnTouchListener() {
 			public boolean onTouch(View v, MotionEvent event) {
 				if (mDragDetector.onTouchEvent(event)) // let the drag detector try to handle it first
 					return true;
 				if (event.getAction() == MotionEvent.ACTION_UP) // if it wasn't handled by the drag detector above, check if it's and UP and that we were dragging something
-					if (mDraggedTag != null)
+					if (mDraggedTag != null) {
 						finishDrag(event);
+					}
 				return false;
 			}
 		};
+		mFrame.setOnTouchListener(mTouchListener);
 		mLocationListener = new LocationListener() {
 			public void onStatusChanged(String provider, int status, Bundle extras) { }
 			public void onProviderEnabled(String provider) { }
@@ -188,13 +189,13 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		}
 	}
 	
-	@Override
-	public boolean onTouchEvent(MotionEvent event) {
-		try {
-		return this.mDragDetector.onTouchEvent(event);
-		}
-		catch (Exception e) {return false;}
-	}
+//	@Override
+//	public boolean onTouchEvent(MotionEvent event) {
+//		try {
+//		return this.mDragDetector.onTouchEvent(event);
+//		}
+//		catch (Exception e) {return false;}
+//	}
 	
 
 	@Override
@@ -237,6 +238,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 					mOrientation[i] = (mOrientation[i] * 9 + tempOrientation[i]) / 10.0f;
 				}
 				mCameraOverlayView.refresh(mOrientation);
+				mCameraOverlayView.updateDistance(getDistance(Math.toDegrees(mOrientation[1])));
 			}
 		}
 		else {
@@ -244,7 +246,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		}
 	}
 	
-	public double GetDistance(double angle) {
+	public double getDistance(double angle) {
 		// angle is in degrees
 		// need to figure out what to do if object is not in middle of screen? maybe?
 		
@@ -262,7 +264,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	
 	// Assume bearing is input as degrees, and distance input as feet
 	// bearing should be clockwise from North
-	public Location CalculateLocation(double lat1, double lng1, double bearing, double distance) {
+	public Location calculateLocation(double lat1, double lng1, double bearing, double distance) {
 		if (bearing < 0.0) {
 			bearing = bearing + 360.0;
 		}
@@ -292,10 +294,10 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	}
 	
 	private void onDrag(MotionEvent event, float distanceX, float distanceY) {
-		mDraggedTag = mCameraOverlayView.getTagAtPoint((int)event.getX(), (int)event.getY());
-		if (mDraggedTag != null) {
-			mDraggedTag.forceLocation(mDraggedTag.screenLocationX + (int)distanceX, mDraggedTag.screenLocationY + (int)distanceY, mLocation.distanceTo(mDraggedTag.location));
-		}
+		if (mDraggedTag == null)
+			mDraggedTag = mCameraOverlayView.getTagAtPoint((int)event.getX(), (int)event.getY());
+		if (mDraggedTag != null)
+			mDraggedTag.forceLocation(mDraggedTag.screenLocationX - (int)distanceX, mDraggedTag.screenLocationY - (int)distanceY, mLocation.distanceTo(mDraggedTag.location));
 	}
 	
 	private void finishDrag(MotionEvent event) {
@@ -310,8 +312,8 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		float lastY = event.getY();
 		float oldLocation = mDraggedTag.screenOldDistance * 3.28084f;		
 		
-		float rawNewLocationHorizontalInDegrees = azimuth - (((width / 2) - lastX) * horizontalPixelsPerDegree);
-		float rawNewLocationVerticalInDegrees = pitch - (((height / 2) - lastY) * verticalPixelsPerDegree);
+		float rawNewLocationHorizontalInDegrees = azimuth - (((width / 2.0f) - lastX) * (1.0f / horizontalPixelsPerDegree));
+		float rawNewLocationVerticalInDegrees = pitch - (((height / 2) - lastY) * (1.0f / verticalPixelsPerDegree));
 		if (rawNewLocationHorizontalInDegrees > 180)
 			rawNewLocationHorizontalInDegrees = rawNewLocationHorizontalInDegrees % -180f;
 		if (rawNewLocationHorizontalInDegrees < 180)
@@ -320,13 +322,14 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			rawNewLocationVerticalInDegrees = rawNewLocationVerticalInDegrees % -180f;
 		if (rawNewLocationVerticalInDegrees < 180)
 			rawNewLocationVerticalInDegrees = rawNewLocationVerticalInDegrees % 180f;
-		Location newLocation = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), rawNewLocationHorizontalInDegrees, oldLocation);
+		Location newLocation = calculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), rawNewLocationHorizontalInDegrees, oldLocation);
 		mDraggedTag.location = newLocation;
 		mDraggedTag.releaseForceLocation();
 		mDraggedTag = null;
 	}
 	
 	private class DragListener extends GestureDetector.SimpleOnGestureListener {
+		public static final String TAG = "DragListener";
 		@Override
 		public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
 			onDrag(e1, distanceX, distanceY);
@@ -335,7 +338,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		
 		@Override
 		public boolean onDown(MotionEvent me) {
-			return true;
+			return true; // this doesn't make sense, but it's necessary. Go figure.
 		}
 		
 		@Override
@@ -355,29 +358,28 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		
 		@Override
 		public boolean onSingleTapUp(MotionEvent me) {
-				try {
-            		Location testLoc = new Location("augdroid-ua.testLocProvider");
-            		testLoc.setLatitude(33.195721);
-            		testLoc.setLongitude(-87.535137);
-            		
-            		mCameraOverlayView.updateLocation(testLoc);
-            		mLocation = testLoc; // Test stuff for debugging*/
-            		
-            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
-            		float pitch = (float)Math.toDegrees(mOrientation[1]);
-    			
-            		double distance = GetDistance(pitch);
-            		Location newLoc = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
-    			
-            		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
-            		mCameraOverlayView.addTag(newTag);
-            		mCameraOverlayView.setOverlayType(mOverlayType);
-            	}
-            	catch (Exception ex) {
-            		Log.e(TAG, ex.getMessage());
-            		// If this triggers, GPS location is probably null
-            	}
-				mDraggedTag = null;
+			try {
+//        		Location testLoc = new Location("augdroid-ua.testLocProvider");
+//        		testLoc.setLatitude(33.195721);
+//        		testLoc.setLongitude(-87.535137);
+//        		
+//        		mCameraOverlayView.updateLocation(testLoc);
+//        		mLocation = testLoc; // Test stuff for debugging*/
+        		
+        		float azimuth = (float)Math.toDegrees(mOrientation[0]);
+        		float pitch = (float)Math.toDegrees(mOrientation[1]);
+			
+        		double distance = getDistance(pitch);
+        		Location newLoc = calculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
+        		
+        		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
+        		mCameraOverlayView.addTag(newTag);
+        	}
+        	catch (Exception ex) {
+        		Log.d(TAG, "No GPS lock yet.");
+        		// If this triggers, GPS location is probably null
+        	}
+			mDraggedTag = null;
 			return true;
 		}
 	}
