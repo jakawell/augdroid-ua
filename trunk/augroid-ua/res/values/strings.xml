@@ -7,5 +7,6 @@
     
     <string name="view_feed_compass">Start camera feed (compass)</string>
     <string name="view_feed_tags">Start camera feed (tags)</string>
+    <string name="lets_go">Let\'s go!</string>
 
 </resources>

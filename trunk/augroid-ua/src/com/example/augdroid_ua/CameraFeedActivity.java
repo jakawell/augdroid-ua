@@ -1,6 +1,8 @@
 package com.example.augdroid_ua;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.hardware.Camera;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -16,6 +18,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 
@@ -27,8 +30,10 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 	private Camera mCamera;
 	private CameraFeedView mCameraFeedView;
 	private CameraOverlayView mCameraOverlayView;
+	private LinearLayout mTutorialView;
 	private FrameLayout mFrame;
 	private int mOverlayType;
+	private boolean mShowingTutorial;
 	private Location mLocation;
 	
 	private SensorManager mSensorManger;
@@ -51,6 +56,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		setContentView(R.layout.camera_feed_layout);
 		
 		mFrame = (FrameLayout)findViewById(R.id.camera_feed_preview);
+		mTutorialView = (LinearLayout)getLayoutInflater().inflate(R.layout.tutorial_overlay, null);
 		mSensorManger = (SensorManager)getSystemService(SENSOR_SERVICE);
 		mLocationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
 		mDraggedTag = null;
@@ -96,49 +102,10 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			mFrame.addView(mCameraFeedView);
 			
 			mCameraOverlayView = new CameraOverlayView(this, mCamera.getParameters().getHorizontalViewAngle(), mCamera.getParameters().getVerticalViewAngle());
-			
-//			mCameraOverlayView.setOnTouchListener(new View.OnTouchListener() {
-//				public boolean onTouch(View v, MotionEvent event) {
-//					int action = event.getAction();
-//					if (action == MotionEvent.ACTION_DOWN) {
-//						mDraggedTag = getTag(event.getX(), event.getY());
-//						if (mDraggedTag != null) {
-//							mDrawNewTag = false;
-//						}
-//					}
-//					else if (action == MotionEvent.ACTION_UP && mDrawNewTag) {
-//						try {
-//		            		Location testLoc = new Location("augdroid-ua.testLocProvider");
-//		            		testLoc.setLatitude(33.195721);
-//		            		testLoc.setLongitude(-87.535137);
-//		            		
-//		            		mCameraOverlayView.updateLocation(testLoc);
-//		            		mLocation = testLoc; // Test stuff for debugging*/
-//		            		
-//		            		float azimuth = (float)Math.toDegrees(mOrientation[0]);
-//		            		float pitch = (float)Math.toDegrees(mOrientation[1]);
-//		    			
-//		            		double distance = GetDistance(pitch);
-//		            		Location newLoc = CalculateLocation(mLocation.getLatitude(), mLocation.getLongitude(), azimuth, distance);
-//		    			
-//		            		Tag newTag = new Tag(1, "newTag", newLoc, 2.0f);
-//		            		mCameraOverlayView.addTag(newTag);
-//		            		mCameraOverlayView.setOverlayType(mOverlayType);
-//		            	}
-//		            	catch (Exception ex) {
-//		            		Log.e(TAG, ex.getMessage());
-//		            		// If this triggers, GPS location is probably null
-//		            	}
-//						mDrawNewTag = true;
-//						mDraggedTag = null;
-//					}
-//					return true;
-//				}
-//			});
-			
+			mCameraOverlayView.setOverlayType(mOverlayType);
+			mFrame.addView(mTutorialView);
+			mShowingTutorial = true;
 			mFrame.addView(mCameraOverlayView);
-			
-			setupTests();
 		} catch (Exception e) {
 			// camera not available (in use)
 			e.printStackTrace();
@@ -147,56 +114,12 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		}
 	}
 	
-	private void setupTests() {
-		Location tag1Loc = new Location("augdroid-ua.testLocProvider");
-		tag1Loc.setLatitude(33.165615);
-		tag1Loc.setLongitude(-87.509218);
-
-		Location tag2Loc = new Location("augdroid-ua.testLocProvider");
-		tag2Loc.setLatitude(33.166198);
-		tag2Loc.setLongitude(-87.508601);
-		
-		Location tagShelbyCenterLoc = new Location("augdroid-ua.testLocProvider");
-		tagShelbyCenterLoc.setLatitude(33.215156);
-		tagShelbyCenterLoc.setLongitude(-87.542064);
-		
-		Location tagPathToFergLoc = new Location("augdroid-ua.testLocProvider");
-		tagPathToFergLoc.setLatitude(33.215546);
-		tagPathToFergLoc.setLongitude(-87.542792);
-		
-		Location forestLake = new Location("augdroid-ua.testLocProvider");
-		forestLake.setLatitude(33.195698);
-		forestLake.setLongitude(-87.534305);
-		
-		Tag tag1 = new Tag(1, "Hello!", tag1Loc, 2.0f);
-		Tag tag2 = new Tag(2, "World!", tag2Loc, 2.0f);
-		Tag tag3 = new Tag(3, "Shelby", tagShelbyCenterLoc, 2.0f);
-		Tag tag4 = new Tag(4, "Path", tagPathToFergLoc, 2.0f);
-		Tag tag5 = new Tag(5, "Lake", forestLake, 2.0f);
-		
-		mCameraOverlayView.addTag(tag1);
-		mCameraOverlayView.addTag(tag2);
-		mCameraOverlayView.addTag(tag3);
-		mCameraOverlayView.addTag(tag4);
-		mCameraOverlayView.addTag(tag5);
-		mCameraOverlayView.setOverlayType(mOverlayType);
-	}
-	
 	private void releaseCamera() {
 		if (mCamera != null) {
 			mCamera.release();
 			mCamera = null;
 		}
 	}
-	
-//	@Override
-//	public boolean onTouchEvent(MotionEvent event) {
-//		try {
-//		return this.mDragDetector.onTouchEvent(event);
-//		}
-//		catch (Exception e) {return false;}
-//	}
-	
 
 	@Override
 	protected void onResume() {
@@ -328,6 +251,25 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		mDraggedTag = null;
 	}
 	
+	private void deleteTag(float x, float y) {
+		final Tag deleteCandidate = mCameraOverlayView.getTagAtPoint((int)x, (int)y);
+		if (deleteCandidate != null) {
+			deleteCandidate.highlight(true);
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setMessage("Delete the tag?");
+			builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int which) {
+					mCameraOverlayView.removeTag(deleteCandidate);
+				}
+			}).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int which) {
+					deleteCandidate.highlight(false);
+				}
+			});
+			builder.show();
+		}
+	}
+	
 	private class DragListener extends GestureDetector.SimpleOnGestureListener {
 		public static final String TAG = "DragListener";
 		@Override
@@ -348,7 +290,7 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		
 		@Override
 		public void onLongPress(MotionEvent me) {
-
+			deleteTag(me.getX(), me.getY());
 		}
 		
 		@Override
@@ -358,13 +300,12 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 		
 		@Override
 		public boolean onSingleTapUp(MotionEvent me) {
+			if (mShowingTutorial) {
+				mFrame.removeView(mTutorialView);
+				mShowingTutorial = false;
+				return true;
+			}
 			try {
-//        		Location testLoc = new Location("augdroid-ua.testLocProvider");
-//        		testLoc.setLatitude(33.195721);
-//        		testLoc.setLongitude(-87.535137);
-//        		
-//        		mCameraOverlayView.updateLocation(testLoc);
-//        		mLocation = testLoc; // Test stuff for debugging*/
         		
         		float azimuth = (float)Math.toDegrees(mOrientation[0]);
         		float pitch = (float)Math.toDegrees(mOrientation[1]);

@@ -7,10 +7,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.location.Location;
+import android.util.Log;
 import android.view.View;
 
 public class CameraOverlayView extends View {
 
+	public static final String TAG = "CameraOverlayView";
 	public static final int OVERLAY_TYPE_NONE = 0;
 	public static final int OVERLAY_TYPE_COMPASS = 1;
 	public static final int OVERLAY_TYPE_TAG = 2;
@@ -63,6 +65,10 @@ public class CameraOverlayView extends View {
 		mTags.add(tag);
 	}
 	
+	public void removeTag(Tag tag) {
+		mTags.remove(tag);
+	}
+	
 	public void setOverlayType(int newType) {
 		mOverlayType = newType;
 	}
@@ -70,8 +76,9 @@ public class CameraOverlayView extends View {
 	public Tag getTagAtPoint(int x, int y) {
 		for (Tag tag : mTags) {
 			if (tag.screenVisible)
-				if (((x - tag.screenLocationX) ^ 2 + (y - tag.screenLocationY) ^ 2) <= (tag.screenRadius ^ 2))
+				if (Math.pow((x - tag.screenLocationX), 2) + Math.pow((y - tag.screenLocationY), 2) <= Math.pow(tag.screenRadius, 2)) {
 					return tag;
+				}
 		}
 		return null;
 	}
@@ -94,16 +101,6 @@ public class CameraOverlayView extends View {
 			canvas.drawText("Aquiring GPS...", 15, 30, mPaint);
 		}
 		else if (mOrientation != null) {
-			mPaint.setColor(Color.DKGRAY); // draw cross hairs
-			canvas.drawLine((mWidth / 2), (mHeight / 2) + 15, (mWidth / 2), (mHeight / 2) + 35, mPaint);
-			canvas.drawLine((mWidth / 2), (mHeight / 2) - 15, (mWidth / 2), (mHeight / 2) - 35, mPaint);
-			canvas.drawLine((mWidth / 2) + 15, (mHeight / 2), (mWidth / 2) + 35, (mHeight / 2), mPaint);
-			canvas.drawLine((mWidth / 2) - 15, (mHeight / 2), (mWidth / 2) - 35, (mHeight / 2), mPaint);
-			
-			mPaint.setColor(Color.RED);
-			mPaint.setTextSize(32);
-			canvas.drawText("Distance: " + mDistance + "feet", 15, 30, mPaint);
-			
 			float azimuth = (float)Math.toDegrees(mOrientation[0]);
 			float pitch = (float)Math.toDegrees(mOrientation[1]);
 			mPaint.setColor(Color.RED);
@@ -160,7 +157,7 @@ public class CameraOverlayView extends View {
 						}
 						
 						if (radiusDisplaySize > 2 && horizontalDisplayPixel > 0 - radiusDisplaySize && verticalDisplayPixel > 0 - radiusDisplaySize && horizontalDisplayPixel < mWidth + radiusDisplaySize && verticalDisplayPixel < mHeight + radiusDisplaySize) { // if any part of the tag would be visible
-							if (tag.forceScreenLocation) {
+							if (tag.highlight) {
 								int oldColor = mPaint.getColor();
 								mPaint.setColor(Color.YELLOW); // add yellow border to show that tag is selected
 								canvas.drawCircle(horizontalDisplayPixel, verticalDisplayPixel, radiusDisplaySize + 3, mPaint);
@@ -181,5 +178,13 @@ public class CameraOverlayView extends View {
 				break;
 			}
 		}
+		mPaint.setColor(Color.RED);
+		mPaint.setTextSize(32);
+		canvas.drawText("Distance: " + mDistance + "feet", 15, mHeight - 10, mPaint);
+		mPaint.setColor(Color.YELLOW); // draw cross hairs
+		canvas.drawLine((mWidth / 2), (mHeight / 2) + 15, (mWidth / 2), (mHeight / 2) + 35, mPaint);
+		canvas.drawLine((mWidth / 2), (mHeight / 2) - 15, (mWidth / 2), (mHeight / 2) - 35, mPaint);
+		canvas.drawLine((mWidth / 2) + 15, (mHeight / 2), (mWidth / 2) + 35, (mHeight / 2), mPaint);
+		canvas.drawLine((mWidth / 2) - 15, (mHeight / 2), (mWidth / 2) - 35, (mHeight / 2), mPaint);
 	}
 }

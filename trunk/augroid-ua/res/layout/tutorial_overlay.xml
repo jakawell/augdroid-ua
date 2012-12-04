@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#AA000000"
+    android:orientation="vertical" >
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1" >
+        
+        <ImageView
+            android:id="@+id/arrow3"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:src="@drawable/arrow3"
+            android:paddingTop="15dp"
+            android:layout_centerInParent="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/arrow3"
+            android:paddingRight="20dp"
+            android:paddingTop="15dp"
+            android:text="Aim at a point on the ground..."
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="#FF0000" />
+        
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1" >
+        
+        <ImageView
+            android:id="@+id/arrow4"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:src="@drawable/arrow7"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:paddingLeft="30dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/arrow4"
+            android:paddingRight="20dp"
+            android:paddingTop="15dp"
+            android:layout_centerInParent="true"
+            android:text="...and see how far it is. Tap to add!"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="#FF0000" />
+        
+    </RelativeLayout>
+    
+
+</LinearLayout>

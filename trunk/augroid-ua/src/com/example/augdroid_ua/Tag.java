@@ -44,6 +44,10 @@ public class Tag {
 	 * The last distance recorded before the screen location was forced, in meters.
 	 */
 	public float screenOldDistance = 0;
+	/**
+	 * Whether or not the tag should be highlighted (i.e., when selected).
+	 */
+	public boolean highlight = false;
 	
 	public Tag(int id, String text, Location location, float height) {
 		this.id = id;
@@ -70,9 +74,15 @@ public class Tag {
 		this.screenLocationX = screenLocationX;
 		this.screenLocationY = screenLocationY;
 		this.screenOldDistance = oldDistance;
+		this.highlight = true;
 	}
 	
 	public void releaseForceLocation() {
 		this.forceScreenLocation = false;
+		this.highlight = false;
+	}
+	
+	public void highlight(boolean highlight) {
+		this.highlight = highlight;
 	}
 }
