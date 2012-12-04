@@ -157,9 +157,11 @@ public class CameraFeedActivity extends Activity implements SensorEventListener 
 			SensorManager.remapCoordinateSystem(mRawRotationMatrix, SensorManager.AXIS_X, SensorManager.AXIS_Z, mRemappedRotationMatrix);
 			SensorManager.getOrientation(mRemappedRotationMatrix, tempOrientation);
 			if (mCameraOverlayView != null) {	// interpolate magnetic orientation data
+				
 				for (int i = 0; i < tempOrientation.length - 1; i++) {
 					mOrientation[i] = (mOrientation[i] * 9 + tempOrientation[i]) / 10.0f;
 				}
+				mOrientation[2] = tempOrientation[2];
 				mCameraOverlayView.refresh(mOrientation);
 				mCameraOverlayView.updateDistance(getDistance(Math.toDegrees(mOrientation[1])));
 			}
